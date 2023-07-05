@@ -1,12 +1,18 @@
 use std::env;
 use std::fs::{read_dir, File};
 use std::io::Read;
+use std::time::Instant;
 use string_builder::Builder;
 
 fn main() {
+    let now = Instant::now();
+
     let args: Vec<String> = env::args().collect();
     let res = count_all_sub_files(&args[1], &args[2]);
-    println!("{res}")
+
+    println!("{} ms", now.elapsed().as_millis());
+
+    println!("{res}");
 }
 
 fn remove_comments_and_space(src: &str) -> String {
@@ -69,10 +75,12 @@ fn count_lines_str(src: &str) -> usize {
     let src = src.trim_start();
     fn count_double_endl(src: &str) -> usize {
         let mut res = 0;
-        for i in 0..src.len() - 1 {
-            if &src[i..i + 2] == "\n\n" {
+        let mut is_prev_endl = false;
+        for c in src.chars() {
+            if c == '\n' && is_prev_endl {
                 res += 1;
             }
+            is_prev_endl = c == '\n';
         }
         res
     }
@@ -97,7 +105,8 @@ fn count_all_sub_files(path: &str, suffix: &str) -> usize {
                 count_all_sub_files(&file_name, suffix)
             } else if file_type.is_file() {
                 if file_name.ends_with(suffix) {
-                    println!("{file_name}");
+                    #[cfg(debug_assertions)]
+                    dbg!("{file_name}");
                     count_lines_file(&file_name)
                 } else {
                     0
