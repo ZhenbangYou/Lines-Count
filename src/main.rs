@@ -100,7 +100,7 @@ fn count_all_sub_files(path: &str, suffix: &str) -> usize {
         .map(|f| {
             let f = f.unwrap();
             let file_type = f.file_type().unwrap();
-            let file_name = format!("{}/{}", path, f.file_name().into_string().unwrap());
+            let file_name = format!("{}/{}", path, f.file_name().to_str().unwrap());
             if file_type.is_dir() {
                 count_all_sub_files(&file_name, suffix)
             } else if file_type.is_file() {
