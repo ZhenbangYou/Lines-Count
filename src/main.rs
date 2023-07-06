@@ -2,7 +2,6 @@ use std::fs::{read_dir, File};
 use std::io::Read;
 use std::time::Instant;
 use std::{env, thread};
-use string_builder::Builder;
 
 const NUM_THREADS: usize = 8;
 fn main() {
@@ -75,78 +74,6 @@ fn count_lines(src: &str) -> usize {
         }
     }
     res
-}
-
-fn remove_comments_and_space(src: &str) -> String {
-    enum State {
-        Code,
-        SingleLineComment,
-        MultiLineComment,
-        Slash,
-        Asterisk,
-    }
-    let mut state = State::Code;
-    let mut builder = Builder::new(0);
-    for c in src.chars().into_iter() {
-        match state {
-            State::Code => {
-                if c != '/' {
-                    const SPACE_SET: [char; 3] = [' ', '\t', '\r'];
-                    if !SPACE_SET.contains(&c) {
-                        builder.append(c);
-                    }
-                } else {
-                    state = State::Slash;
-                }
-            }
-            State::SingleLineComment => {
-                if c == '\n' {
-                    state = State::Code;
-                }
-            }
-            State::MultiLineComment => {
-                if c == '*' {
-                    state = State::Asterisk;
-                }
-            }
-            State::Slash => {
-                if c == '/' {
-                    state = State::SingleLineComment;
-                } else if c == '*' {
-                    state = State::MultiLineComment;
-                } else {
-                    builder.append('/');
-                    builder.append(c);
-                    state = State::Code;
-                }
-            }
-            State::Asterisk => {
-                if c == '/' {
-                    state = State::Code;
-                } else if c != '*' {
-                    state = State::MultiLineComment;
-                }
-            }
-        }
-    }
-    builder.string().unwrap()
-}
-
-fn count_lines_str(src: &str) -> usize {
-    let src = remove_comments_and_space(src);
-    let src = src.trim_start();
-    fn count_double_endl(src: &str) -> usize {
-        let mut res = 0;
-        let mut is_prev_endl = false;
-        for c in src.chars() {
-            if c == '\n' && is_prev_endl {
-                res += 1;
-            }
-            is_prev_endl = c == '\n';
-        }
-        res
-    }
-    src.chars().filter(|c| *c == '\n').count() - count_double_endl(&src)
 }
 
 fn count_lines_file(path: &str) -> usize {
