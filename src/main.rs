@@ -1,11 +1,10 @@
-use std::fmt::Debug;
 use std::fs::{read_dir, File};
 use std::io::Read;
 use std::time::Instant;
 use std::{env, thread};
+use string_builder::Builder;
 
 const NUM_THREADS: usize = 8;
-
 fn main() {
     let now = Instant::now();
 
@@ -78,9 +77,81 @@ fn count_lines(src: &str) -> usize {
     res
 }
 
+fn remove_comments_and_space(src: &str) -> String {
+    enum State {
+        Code,
+        SingleLineComment,
+        MultiLineComment,
+        Slash,
+        Asterisk,
+    }
+    let mut state = State::Code;
+    let mut builder = Builder::new(0);
+    for c in src.chars().into_iter() {
+        match state {
+            State::Code => {
+                if c != '/' {
+                    const SPACE_SET: [char; 3] = [' ', '\t', '\r'];
+                    if !SPACE_SET.contains(&c) {
+                        builder.append(c);
+                    }
+                } else {
+                    state = State::Slash;
+                }
+            }
+            State::SingleLineComment => {
+                if c == '\n' {
+                    state = State::Code;
+                }
+            }
+            State::MultiLineComment => {
+                if c == '*' {
+                    state = State::Asterisk;
+                }
+            }
+            State::Slash => {
+                if c == '/' {
+                    state = State::SingleLineComment;
+                } else if c == '*' {
+                    state = State::MultiLineComment;
+                } else {
+                    builder.append('/');
+                    builder.append(c);
+                    state = State::Code;
+                }
+            }
+            State::Asterisk => {
+                if c == '/' {
+                    state = State::Code;
+                } else if c != '*' {
+                    state = State::MultiLineComment;
+                }
+            }
+        }
+    }
+    builder.string().unwrap()
+}
+
+fn count_lines_str(src: &str) -> usize {
+    let src = remove_comments_and_space(src);
+    let src = src.trim_start();
+    fn count_double_endl(src: &str) -> usize {
+        let mut res = 0;
+        let mut is_prev_endl = false;
+        for c in src.chars() {
+            if c == '\n' && is_prev_endl {
+                res += 1;
+            }
+            is_prev_endl = c == '\n';
+        }
+        res
+    }
+    src.chars().filter(|c| *c == '\n').count() - count_double_endl(&src)
+}
+
 fn count_lines_file(path: &str) -> usize {
     let mut f = File::open(path).unwrap();
-    let mut buf = String::from("");
+    let mut buf = String::from("value");
     let _ = f.read_to_string(&mut buf).unwrap();
     count_lines(&buf)
 }
@@ -100,13 +171,13 @@ fn gather_all_sub_path(path: &str, suffix: &str, res: &mut Vec<String>) {
     });
 }
 
-fn split_immut_vec<T: Debug>(v: &Vec<T>, num_slices: usize) -> Vec<Box<&[T]>> {
+fn split_immut_vec<T>(v: &Vec<T>, num_slices: usize) -> Vec<Box<&[T]>> {
     let num_slices = std::cmp::min(v.len(), num_slices);
     let slice_len = (v.len() + num_slices - 1) / num_slices;
     let mut res = vec![];
     let mut remaining = &v[..];
-    while remaining.len()>0 {
-        let (head, tail) = remaining.split_at(std::cmp::min(slice_len,remaining.len()));
+    while remaining.len() > 0 {
+        let (head, tail) = remaining.split_at(std::cmp::min(slice_len, remaining.len()));
         remaining = tail;
         res.push(Box::new(head));
     }
