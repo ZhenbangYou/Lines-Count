@@ -102,27 +102,25 @@ fn gather_all_sub_path(path: &str, suffix: &str, res: &mut Vec<String>) {
     });
 }
 
-fn split_immut_vec<T>(v: &Vec<T>, num_slices: usize) -> Vec<Box<&[T]>> {
-    let num_slices = std::cmp::min(v.len(), num_slices);
-    let slice_len = (v.len() + num_slices - 1) / num_slices;
-    let mut res = vec![];
-    let mut remaining = &v[..];
-    while remaining.len() > 0 {
-        let (head, tail) = remaining.split_at(std::cmp::min(slice_len, remaining.len()));
-        remaining = tail;
-        res.push(Box::new(head));
-    }
-    res
-}
-
 fn count_all_sub_files_threaded(path: &str, suffix: &str, num_slices: usize) -> usize {
     let mut v = vec![];
     gather_all_sub_path(path, suffix, &mut v);
-    let v = split_immut_vec(&v, num_slices);
+
+    let v = (0..num_slices)
+        .map(|idx| {
+            let slice_len = (v.len() + num_slices - 1) / num_slices;
+            (
+                slice_len * idx,
+                std::cmp::min(slice_len * (idx + 1), v.len()),
+            )
+        })
+        .filter(|(a, b)| a < b)
+        .map(|(a, b)| &v[a..b]);
+
     let pool = ThreadPool::new(NUM_CPU_CORES);
     let res = AtomicUsize::new(0);
     scope_with(&pool, |s| {
-        v.iter().for_each(|fs| {
+        v.for_each(|fs| {
             s.execute(|| {
                 res.fetch_add(
                     fs.iter().map(|f| count_lines_file(f)).sum(),
