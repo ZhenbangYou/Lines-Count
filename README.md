@@ -12,5 +12,4 @@ The above means counting the number of lines of code in files whose name ends wi
 
 ## Note
 
-After parallelization, it becomes IO-bound, so setting the number of threads to be more than the number of CPU cores helps.
-On my machine (M1 Max), it seems using 128 threads is roughly the sweet point.
+After parallelization, it becomes IO-bound, so setting the number of *jobs* (*NUM_JOBS*) to be more than the number of CPU cores (*NUM_CPU_CORES*) helps.

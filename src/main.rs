@@ -1,14 +1,19 @@
+use std::env;
 use std::fs::{read_dir, File};
 use std::io::Read;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::Instant;
-use std::{env, thread};
+use threadpool::ThreadPool;
+use threadpool_scope::scope_with;
 
-const NUM_THREADS: usize = 128;
+const NUM_JOBS: usize = 1024;
+const NUM_CPU_CORES: usize = 10;
 fn main() {
     let now = Instant::now();
 
     let args: Vec<String> = env::args().collect();
-    let res = count_all_sub_files_threaded(&args[1], &args[2], NUM_THREADS);
+    let res = count_all_sub_files_threaded(&args[1], &args[2], NUM_JOBS);
 
     println!("{} ms", now.elapsed().as_millis());
 
@@ -115,12 +120,17 @@ fn count_all_sub_files_threaded(path: &str, suffix: &str, num_slices: usize) -> 
     let mut v = vec![];
     gather_all_sub_path(path, suffix, &mut v);
     let v = split_immut_vec(&v, num_slices);
-    thread::scope(|s| {
-        v.iter()
-            .map(|fs| s.spawn(|| fs.iter().map(|f| count_lines_file(f)).sum::<usize>()))
-            .collect::<Vec<_>>()
-            .into_iter()
-            .map(|t| t.join().unwrap())
-            .sum()
-    })
+    let pool = ThreadPool::new(NUM_CPU_CORES);
+    let res = Arc::new(AtomicUsize::new(0));
+    scope_with(&pool, |s| {
+        v.iter().for_each(|fs| {
+            s.execute(|| {
+                res.fetch_add(
+                    fs.iter().map(|f| count_lines_file(f)).sum(),
+                    Ordering::Relaxed,
+                );
+            })
+        });
+    });
+    res.load(Ordering::Relaxed)
 }
