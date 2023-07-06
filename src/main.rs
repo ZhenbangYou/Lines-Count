@@ -120,6 +120,8 @@ fn count_all_sub_files_threaded(path: &str, suffix: &str, num_slices: usize) -> 
     thread::scope(|s| {
         v.iter()
             .map(|fs| s.spawn(|| fs.iter().map(|f| count_lines_file(f)).sum::<usize>()))
+            .collect::<Vec<_>>()
+            .into_iter()
             .map(|t| t.join().unwrap())
             .sum()
     })
