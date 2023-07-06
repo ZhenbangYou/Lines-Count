@@ -3,7 +3,7 @@ use std::io::Read;
 use std::time::Instant;
 use std::{env, thread};
 
-const NUM_THREADS: usize = 8;
+const NUM_THREADS: usize = 128;
 fn main() {
     let now = Instant::now();
 
