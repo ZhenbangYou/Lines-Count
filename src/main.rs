@@ -2,7 +2,6 @@ use std::env;
 use std::fs::{read_dir, File};
 use std::io::Read;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 use std::time::Instant;
 use threadpool::ThreadPool;
 use threadpool_scope::scope_with;
@@ -121,7 +120,7 @@ fn count_all_sub_files_threaded(path: &str, suffix: &str, num_slices: usize) -> 
     gather_all_sub_path(path, suffix, &mut v);
     let v = split_immut_vec(&v, num_slices);
     let pool = ThreadPool::new(NUM_CPU_CORES);
-    let res = Arc::new(AtomicUsize::new(0));
+    let res = AtomicUsize::new(0);
     scope_with(&pool, |s| {
         v.iter().for_each(|fs| {
             s.execute(|| {
