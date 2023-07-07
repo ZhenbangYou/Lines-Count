@@ -1,11 +1,11 @@
 use futures::future::join_all;
-use smol;
-use smol::fs::File;
-use smol::io;
-use smol::io::AsyncReadExt;
 use std::env;
 use std::fs::read_dir;
 use std::time::Instant;
+use tokio;
+use tokio::fs::File;
+use tokio::io;
+use tokio::io::AsyncReadExt;
 
 fn main() {
     let now = Instant::now();
@@ -105,7 +105,9 @@ fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
     let mut v = vec![];
     gather_all_sub_path(path, suffixes, &mut v);
 
-    smol::block_on(join_all(v.iter().map(|f| count_lines_file(f))))
+    tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(join_all(v.iter().map(|f| count_lines_file(f))))
         .into_iter()
         .map(|x| x.unwrap())
         .sum()
