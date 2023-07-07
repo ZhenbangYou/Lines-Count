@@ -1,11 +1,10 @@
+use async_std;
+use async_std::fs::File;
+use async_std::io::{self, ReadExt};
 use futures::future::join_all;
 use std::env;
 use std::fs::read_dir;
 use std::time::Instant;
-use tokio;
-use tokio::fs::File;
-use tokio::io;
-use tokio::io::AsyncReadExt;
 
 fn main() {
     let now = Instant::now();
@@ -105,9 +104,7 @@ fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
     let mut v = vec![];
     gather_all_sub_path(path, suffixes, &mut v);
 
-    tokio::runtime::Runtime::new()
-        .unwrap()
-        .block_on(join_all(v.iter().map(|f| count_lines_file(f))))
+    async_std::task::block_on(join_all(v.iter().map(|f| count_lines_file(f))))
         .into_iter()
         .map(|x| x.unwrap())
         .sum()
