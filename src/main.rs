@@ -1,10 +1,8 @@
+use rayon::prelude::*;
+use std::env;
 use std::fs::{read_dir, File};
 use std::io::Read;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
-use std::{env, thread};
-use threadpool::ThreadPool;
-use threadpool_scope::scope_with;
 
 const NUM_JOBS: usize = 1024;
 fn main() {
@@ -105,7 +103,8 @@ fn count_all_sub_files_threaded(path: &str, suffixes: &[String], num_slices: usi
     let mut v = vec![];
     gather_all_sub_path(path, suffixes, &mut v);
 
-    let v = (0..num_slices)
+    (0..num_slices)
+        .par_bridge()
         .map(|idx| {
             let slice_len = (v.len() + num_slices - 1) / num_slices;
             (
@@ -114,19 +113,7 @@ fn count_all_sub_files_threaded(path: &str, suffixes: &[String], num_slices: usi
             )
         })
         .filter(|(a, b)| a < b)
-        .map(|(a, b)| &v[a..b]);
-
-    let pool = ThreadPool::new(thread::available_parallelism().unwrap().into());
-    let res = AtomicUsize::new(0);
-    scope_with(&pool, |s| {
-        v.for_each(|fs| {
-            s.execute(|| {
-                res.fetch_add(
-                    fs.iter().map(|f| count_lines_file(f)).sum(),
-                    Ordering::Relaxed,
-                );
-            })
-        });
-    });
-    res.load(Ordering::Relaxed)
+        .map(|(a, b)| &v[a..b])
+        .map(|fs| fs.iter().map(|f| count_lines_file(f)).sum::<usize>())
+        .sum::<usize>()
 }
