@@ -113,7 +113,11 @@ fn count_all_sub_files_threaded(path: &str, suffixes: &[String], num_slices: usi
             )
         })
         .filter(|(a, b)| a < b)
-        .map(|(a, b)| &v[a..b])
-        .map(|fs| fs.iter().map(|f| count_lines_file(f)).sum::<usize>())
-        .sum::<usize>()
+        .map(|(a, b)| {
+            (&v[a..b])
+                .iter()
+                .map(|f| count_lines_file(f))
+                .sum::<usize>()
+        })
+        .sum()
 }
