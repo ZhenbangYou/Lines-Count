@@ -2,6 +2,7 @@ use async_std;
 use async_std::fs::File;
 use async_std::io::{self, ReadExt};
 use futures::future::join_all;
+use futures::join;
 use std::env;
 use std::fs::read_dir;
 use std::time::Instant;
@@ -85,27 +86,33 @@ async fn count_lines_file(path: &str) -> io::Result<usize> {
     Ok(count_lines(&buf))
 }
 
-fn gather_all_sub_path(path: &str, suffixes: &[String], res: &mut Vec<String>) {
-    read_dir(path).unwrap().for_each(|f| {
-        let f = f.unwrap();
-        let file_type = f.file_type().unwrap();
-        let file_name = format!("{}/{}", path, f.file_name().to_str().unwrap());
-        if file_type.is_dir() {
-            gather_all_sub_path(&file_name, suffixes, res);
-        } else if file_type.is_file() {
-            if suffixes.iter().any(|s| file_name.ends_with(s)) {
-                res.push(file_name);
+fn gather_all_sub_path(path: &str, suffixes: &[String]) -> Vec<String> {
+    fn gather_all_sub_path_internal(path: &str, suffixes: &[String], res: &mut Vec<String>) {
+        read_dir(path).unwrap().for_each(|f| {
+            let f = f.unwrap();
+            let file_type = f.file_type().unwrap();
+            let file_name = format!("{}/{}", path, f.file_name().to_str().unwrap());
+            if file_type.is_dir() {
+                gather_all_sub_path_internal(&file_name, suffixes, res);
+            } else if file_type.is_file() {
+                if suffixes.iter().any(|s| file_name.ends_with(s)) {
+                    res.push(file_name);
+                }
             }
-        }
-    });
+        });
+    }
+    let mut v = vec![];
+    gather_all_sub_path_internal(path, suffixes, &mut v);
+    v
 }
 
 fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
-    let mut v = vec![];
-    gather_all_sub_path(path, suffixes, &mut v);
-
-    async_std::task::block_on(join_all(v.iter().map(|f| count_lines_file(f))))
-        .into_iter()
-        .map(|x| x.unwrap())
-        .sum()
+    async_std::task::block_on(join_all(
+        gather_all_sub_path(path, suffixes)
+            .iter()
+            .map(|f| count_lines_file(f)),
+    ))
+    .into_iter()
+    .map(|x| x.unwrap())
+    .sum()
 }
