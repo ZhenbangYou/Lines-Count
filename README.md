@@ -12,5 +12,5 @@ The above means counting the number of lines of code in files whose name ends wi
 
 ## Note
 
-After parallelization, it becomes IO-bound, so setting the number of *jobs* (*NUM_JOBS*) to be more than the number of CPU cores helps.
-The performance is very robust to *NUM_JOBS*, as long as it is not too small.
+After parallelization, it becomes IO-bound.
+Now we use *rayon* to automatically do parallelism, so there is no need to worry about hyper-parameters.

@@ -4,12 +4,11 @@ use std::fs::{read_dir, File};
 use std::io::Read;
 use std::time::Instant;
 
-const NUM_JOBS: usize = 1024;
 fn main() {
     let now = Instant::now();
 
     let args: Vec<String> = env::args().collect();
-    let res = count_all_sub_files_threaded(&args[1], &args[2..], NUM_JOBS);
+    let res = count_all_sub_files_threaded(&args[1], &args[2..]);
 
     println!("{} ms", now.elapsed().as_millis());
 
@@ -99,25 +98,9 @@ fn gather_all_sub_path(path: &str, suffixes: &[String], res: &mut Vec<String>) {
     });
 }
 
-fn count_all_sub_files_threaded(path: &str, suffixes: &[String], num_slices: usize) -> usize {
+fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
     let mut v = vec![];
     gather_all_sub_path(path, suffixes, &mut v);
 
-    (0..num_slices)
-        .par_bridge()
-        .map(|idx| {
-            let slice_len = (v.len() + num_slices - 1) / num_slices;
-            (
-                slice_len * idx,
-                std::cmp::min(slice_len * (idx + 1), v.len()),
-            )
-        })
-        .filter(|(a, b)| a < b)
-        .map(|(a, b)| {
-            (&v[a..b])
-                .iter()
-                .map(|f| count_lines_file(f))
-                .sum::<usize>()
-        })
-        .sum()
+    v.par_iter().map(|f| count_lines_file(f)).sum()
 }
