@@ -1,7 +1,10 @@
-use rayon::prelude::*;
+use futures::future::join_all;
+use smol;
+use smol::fs::File;
+use smol::io;
+use smol::io::AsyncReadExt;
 use std::env;
-use std::fs::{read_dir, File};
-use std::io::Read;
+use std::fs::read_dir;
 use std::time::Instant;
 
 fn main() {
@@ -12,7 +15,7 @@ fn main() {
 
     println!("{} ms", now.elapsed().as_millis());
 
-    println!("{res}");
+    println!("{}", res)
 }
 
 fn count_lines(src: &str) -> usize {
@@ -76,11 +79,11 @@ fn count_lines(src: &str) -> usize {
     res
 }
 
-fn count_lines_file(path: &str) -> usize {
-    let mut f = File::open(path).unwrap();
-    let mut buf = String::from("value");
-    let _ = f.read_to_string(&mut buf).unwrap();
-    count_lines(&buf)
+async fn count_lines_file(path: &str) -> io::Result<usize> {
+    let mut f = File::open(path).await?;
+    let mut buf = String::new();
+    let _ = f.read_to_string(&mut buf).await?;
+    Ok(count_lines(&buf))
 }
 
 fn gather_all_sub_path(path: &str, suffixes: &[String], res: &mut Vec<String>) {
@@ -102,5 +105,8 @@ fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
     let mut v = vec![];
     gather_all_sub_path(path, suffixes, &mut v);
 
-    v.par_iter().map(|f| count_lines_file(f)).sum()
+    smol::block_on(join_all(v.iter().map(|f| count_lines_file(f))))
+        .into_iter()
+        .map(|x| x.unwrap())
+        .sum()
 }
