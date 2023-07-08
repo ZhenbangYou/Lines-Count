@@ -2,7 +2,6 @@ use async_std;
 use async_std::fs::File;
 use async_std::io::{self, ReadExt};
 use futures::future::join_all;
-use futures::join;
 use std::env;
 use std::fs::read_dir;
 use std::time::Instant;
