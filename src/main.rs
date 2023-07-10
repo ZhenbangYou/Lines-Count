@@ -15,7 +15,7 @@ fn main() {
     println!("{res}");
 }
 
-fn count_lines(src: &str) -> usize {
+fn count_lines(src: &String) -> usize {
     enum State {
         Code,
         SingleLineComment,
@@ -76,9 +76,9 @@ fn count_lines(src: &str) -> usize {
     res
 }
 
-fn count_lines_file(path: &str) -> usize {
+fn count_lines_file(path: &String) -> usize {
     let mut f = File::open(path).unwrap();
-    let mut buf = String::from("value");
+    let mut buf = String::new();
     match f.read_to_string(&mut buf) {
         Ok(_) => count_lines(&buf),
         Err(e) => {
@@ -88,7 +88,7 @@ fn count_lines_file(path: &str) -> usize {
     }
 }
 
-fn gather_all_sub_path(path: &str, suffixes: &[String], res: &mut Vec<String>) {
+fn gather_all_sub_path(path: &String, suffixes: &[String], res: &mut Vec<String>) {
     read_dir(path).unwrap().for_each(|f| {
         let f = f.unwrap();
         let file_type = f.file_type().unwrap();
@@ -103,9 +103,9 @@ fn gather_all_sub_path(path: &str, suffixes: &[String], res: &mut Vec<String>) {
     });
 }
 
-fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
+fn count_all_sub_files_threaded(path: &String, suffixes: &[String]) -> usize {
     let mut v = vec![];
     gather_all_sub_path(path, suffixes, &mut v);
 
-    v.par_iter().map(|f| count_lines_file(f)).sum()
+    v.par_iter().map(count_lines_file).sum()
 }
