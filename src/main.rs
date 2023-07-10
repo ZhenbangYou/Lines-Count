@@ -1,8 +1,9 @@
 use rayon::prelude::*;
 use std::env;
-use std::fs::{read_dir, File};
+use std::fs::File;
 use std::io::Read;
 use std::time::Instant;
+use walkdir::WalkDir;
 
 fn main() {
     let now = Instant::now();
@@ -88,24 +89,19 @@ fn count_lines_file(path: &str) -> usize {
     }
 }
 
-fn gather_all_sub_path(path: &str, suffixes: &[String], res: &mut Vec<String>) {
-    read_dir(path).unwrap().for_each(|f| {
-        let f = f.unwrap();
-        let file_type = f.file_type().unwrap();
-        let file_name = format!("{}/{}", path, f.file_name().to_str().unwrap());
-        if file_type.is_dir() {
-            gather_all_sub_path(&file_name, suffixes, res);
-        } else if file_type.is_file() {
-            if suffixes.iter().any(|s| file_name.ends_with(s)) {
-                res.push(file_name);
-            }
-        }
-    });
+fn gather_all_sub_path(path: &String, suffixes: &[String]) -> Vec<String> {
+    WalkDir::new(path)
+        .into_iter()
+        .map(|x| x.unwrap())
+        .filter(|p| !p.path_is_symlink())
+        .map(|x| String::from(x.path().to_str().unwrap()))
+        .filter(|f| suffixes.iter().any(|s| f.ends_with(s)))
+        .collect()
 }
 
-fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
-    let mut v = vec![];
-    gather_all_sub_path(path, suffixes, &mut v);
-
-    v.par_iter().map(|f| count_lines_file(f)).sum()
+fn count_all_sub_files_threaded(path: &String, suffixes: &[String]) -> usize {
+    gather_all_sub_path(path, suffixes)
+        .par_iter()
+        .map(|f| count_lines_file(f))
+        .sum()
 }
