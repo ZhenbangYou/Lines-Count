@@ -77,9 +77,8 @@ fn count_lines(src: &String) -> usize {
 }
 
 fn count_lines_file(path: &String) -> usize {
-    let mut f = File::open(path).unwrap();
     let mut buf = String::new();
-    match f.read_to_string(&mut buf) {
+    match File::open(path).unwrap().read_to_string(&mut buf) {
         Ok(_) => count_lines(&buf),
         Err(e) => {
             eprintln!("error when reading `{path}`: {e}");
