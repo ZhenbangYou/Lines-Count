@@ -17,7 +17,7 @@ fn main() {
     println!("{}", res)
 }
 
-fn count_lines(src: &str) -> usize {
+fn count_lines(src: &String) -> usize {
     enum State {
         Code,
         SingleLineComment,
@@ -78,7 +78,7 @@ fn count_lines(src: &str) -> usize {
     res
 }
 
-async fn count_lines_file(path: &str) -> usize {
+async fn count_lines_file(path: &String) -> usize {
     let mut f = File::open(path).await.unwrap();
     let mut buf = String::from("value");
     match f.read_to_string(&mut buf).await {
@@ -111,7 +111,7 @@ fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
 
     tokio::runtime::Runtime::new()
         .unwrap()
-        .block_on(join_all(v.iter().map(|f| count_lines_file(f))))
+        .block_on(join_all(v.iter().map(count_lines_file)))
         .iter()
         .sum()
 }
