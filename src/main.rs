@@ -79,11 +79,16 @@ fn count_lines(src: &str) -> usize {
     res
 }
 
-async fn count_lines_file(path: &str) -> io::Result<usize> {
-    let mut f = File::open(path).await?;
-    let mut buf = String::new();
-    let _ = f.read_to_string(&mut buf).await?;
-    Ok(count_lines(&buf))
+async fn count_lines_file(path: &str) -> usize {
+    let mut f = File::open(path).await.unwrap();
+    let mut buf = String::from("value");
+    match f.read_to_string(&mut buf).await {
+        Ok(_) => count_lines(&buf),
+        Err(e) => {
+            eprintln!("error when reading `{path}`: {e}");
+            0
+        }
+    }
 }
 
 fn gather_all_sub_path(path: &str, suffixes: &[String], res: &mut Vec<String>) {
@@ -106,7 +111,6 @@ fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
     gather_all_sub_path(path, suffixes, &mut v);
 
     smol::block_on(join_all(v.iter().map(|f| count_lines_file(f))))
-        .into_iter()
-        .map(|x| x.unwrap())
+        .iter()
         .sum()
 }
