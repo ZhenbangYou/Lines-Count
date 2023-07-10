@@ -77,7 +77,7 @@ fn count_lines(src: &str) -> usize {
     res
 }
 
-fn count_lines_file(path: &str) -> usize {
+fn count_lines_file(path: &String) -> usize {
     let mut f = File::open(path).unwrap();
     let mut buf = String::from("value");
     match f.read_to_string(&mut buf) {
@@ -102,6 +102,6 @@ fn gather_all_sub_path(path: &String, suffixes: &[String]) -> Vec<String> {
 fn count_all_sub_files_threaded(path: &String, suffixes: &[String]) -> usize {
     gather_all_sub_path(path, suffixes)
         .par_iter()
-        .map(|f| count_lines_file(f))
+        .map(count_lines_file)
         .sum()
 }
