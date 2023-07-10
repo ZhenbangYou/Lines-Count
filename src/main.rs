@@ -1,7 +1,6 @@
 use futures::future::join_all;
 use smol;
 use smol::fs::File;
-use smol::io;
 use smol::io::AsyncReadExt;
 use std::env;
 use std::fs::read_dir;
