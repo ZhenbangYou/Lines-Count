@@ -7,12 +7,12 @@ use std::time::Instant;
 fn main() {
     let now = Instant::now();
 
-    let args: Vec<String> = env::args().collect();
+    let args: Vec<_> = env::args().collect();
     let res = count_all_sub_files_threaded(&args[1], &args[2..]);
 
     println!("{} ms", now.elapsed().as_millis());
 
-    println!("{res}");
+    println!("{res}")
 }
 
 fn count_lines(src: &String) -> usize {
@@ -100,12 +100,11 @@ fn gather_all_sub_path(path: &String, suffixes: &[String], res: &mut Vec<String>
                 res.push(file_name);
             }
         }
-    });
+    })
 }
 
 fn count_all_sub_files_threaded(path: &String, suffixes: &[String]) -> usize {
     let mut v = vec![];
     gather_all_sub_path(path, suffixes, &mut v);
-
     v.par_iter().map(count_lines_file).sum()
 }
