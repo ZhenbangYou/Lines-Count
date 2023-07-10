@@ -1,6 +1,6 @@
 use async_std;
 use async_std::fs::File;
-use async_std::io::{self, ReadExt};
+use async_std::io::ReadExt;
 use futures::future::join_all;
 use std::env;
 use std::fs::read_dir;
@@ -78,11 +78,16 @@ fn count_lines(src: &str) -> usize {
     res
 }
 
-async fn count_lines_file(path: &str) -> io::Result<usize> {
-    let mut f = File::open(path).await?;
-    let mut buf = String::new();
-    let _ = f.read_to_string(&mut buf).await?;
-    Ok(count_lines(&buf))
+async fn count_lines_file(path: &str) -> usize {
+    let mut f = File::open(path).await.unwrap();
+    let mut buf = String::from("value");
+    match f.read_to_string(&mut buf).await {
+        Ok(_) => count_lines(&buf),
+        Err(e) => {
+            eprintln!("error when reading `{path}`: {e}");
+            0
+        }
+    }
 }
 
 fn gather_all_sub_path(path: &str, suffixes: &[String]) -> Vec<String> {
@@ -111,7 +116,6 @@ fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
             .iter()
             .map(|f| count_lines_file(f)),
     ))
-    .into_iter()
-    .map(|x| x.unwrap())
+    .iter()
     .sum()
 }
