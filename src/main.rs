@@ -7,15 +7,15 @@ use std::time::Instant;
 fn main() {
     let now = Instant::now();
 
-    let args: Vec<_> = env::args().collect();
+    let args: Vec<String> = env::args().collect();
     let res = count_all_sub_files_threaded(&args[1], &args[2..]);
 
     println!("{} ms", now.elapsed().as_millis());
 
-    println!("{res}")
+    println!("{res}");
 }
 
-fn count_lines(src: &String) -> usize {
+fn count_lines(src: &str) -> usize {
     enum State {
         Code,
         SingleLineComment,
@@ -76,9 +76,10 @@ fn count_lines(src: &String) -> usize {
     res
 }
 
-fn count_lines_file(path: &String) -> usize {
-    let mut buf = String::new();
-    match File::open(path).unwrap().read_to_string(&mut buf) {
+fn count_lines_file(path: &str) -> usize {
+    let mut f = File::open(path).unwrap();
+    let mut buf = String::from("value");
+    match f.read_to_string(&mut buf) {
         Ok(_) => count_lines(&buf),
         Err(e) => {
             eprintln!("error when reading `{path}`: {e}");
@@ -87,7 +88,7 @@ fn count_lines_file(path: &String) -> usize {
     }
 }
 
-fn gather_all_sub_path(path: &String, suffixes: &[String], res: &mut Vec<String>) {
+fn gather_all_sub_path(path: &str, suffixes: &[String], res: &mut Vec<String>) {
     read_dir(path).unwrap().for_each(|f| {
         let f = f.unwrap();
         let file_type = f.file_type().unwrap();
@@ -99,11 +100,12 @@ fn gather_all_sub_path(path: &String, suffixes: &[String], res: &mut Vec<String>
                 res.push(file_name);
             }
         }
-    })
+    });
 }
 
-fn count_all_sub_files_threaded(path: &String, suffixes: &[String]) -> usize {
+fn count_all_sub_files_threaded(path: &str, suffixes: &[String]) -> usize {
     let mut v = vec![];
     gather_all_sub_path(path, suffixes, &mut v);
-    v.par_iter().map(count_lines_file).sum()
+
+    v.par_iter().map(|f| count_lines_file(f)).sum()
 }
