@@ -78,15 +78,9 @@ fn count_lines(src: &str) -> usize {
 }
 
 fn count_lines_file(path: &String) -> usize {
-    let mut f = File::open(path).unwrap();
-    let mut buf = String::from("value");
-    match f.read_to_string(&mut buf) {
-        Ok(_) => count_lines(&buf),
-        Err(e) => {
-            eprintln!("error when reading `{path}`: {e}");
-            0
-        }
-    }
+    let mut bytes = Vec::new();
+    File::open(path).unwrap().read_to_end(&mut bytes).unwrap();
+    count_lines(&String::from_utf8_lossy(&bytes))
 }
 
 fn gather_all_sub_path(path: &String, suffixes: &[String]) -> Vec<String> {
